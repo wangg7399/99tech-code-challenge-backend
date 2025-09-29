@@ -1,0 +1,128 @@
+graph TB
+    subgraph "Client Layer"
+        WC1[Web Client 1]
+        WC2[Web Client 2]
+        WC3[Web Client N]
+    end
+
+    subgraph "Load Balancer"
+        LB[Nginx Load Balancer]
+    end
+
+    subgraph "API Server Layer"
+        AS1[API Server 1<br/>Node.js + Express]
+        AS2[API Server 2<br/>Node.js + Express]
+        AS3[API Server N<br/>Node.js + Express]
+    end
+
+    subgraph "Authentication & Security"
+        AUTH[JWT Authentication<br/>Middleware]
+        RATE[Rate Limiting<br/>Middleware]
+        VALID[Input Validation<br/>Middleware]
+    end
+
+    subgraph "Business Logic"
+        SC[Score Controller]
+        AC[Anti-Cheat Engine]
+        LBC[Leaderboard Controller]
+    end
+
+    subgraph "Real-time Layer"
+        WS1[WebSocket Server 1<br/>Socket.io]
+        WS2[WebSocket Server 2<br/>Socket.io]
+        WS3[WebSocket Server N<br/>Socket.io]
+    end
+
+    subgraph "Cache & Message Layer"
+        REDIS[(Redis Cluster)]
+        PUBSUB[Redis Pub/Sub]
+        CACHE[Redis Cache<br/>Leaderboard Data]
+    end
+
+    subgraph "Database Layer"
+        MONGO[(MongoDB Cluster)]
+        USER_DB[Users Collection]
+        SCORE_DB[Score History Collection]
+        LEADER_DB[Leaderboard Collection]
+    end
+
+    subgraph "Monitoring & Logging"
+        LOGS[Winston Logger]
+        METRICS[Prometheus Metrics]
+        ALERTS[Alert Manager]
+    end
+
+    %% Client connections
+    WC1 -.->|HTTP/WebSocket| LB
+    WC2 -.->|HTTP/WebSocket| LB
+    WC3 -.->|HTTP/WebSocket| LB
+
+    %% Load balancer distribution
+    LB --> AS1
+    LB --> AS2
+    LB --> AS3
+
+    %% WebSocket connections
+    AS1 <--> WS1
+    AS2 <--> WS2
+    AS3 <--> WS3
+
+    %% API request flow
+    AS1 --> AUTH
+    AS2 --> AUTH
+    AS3 --> AUTH
+    
+    AUTH --> RATE
+    RATE --> VALID
+    VALID --> SC
+    
+    SC --> AC
+    AC --> LBC
+
+    %% Business logic to data layer
+    SC --> MONGO
+    LBC --> REDIS
+    LBC --> MONGO
+
+    %% Real-time updates
+    SC -->|Score Update Event| PUBSUB
+    PUBSUB --> WS1
+    PUBSUB --> WS2
+    PUBSUB --> WS3
+
+    %% Cache operations
+    LBC <--> CACHE
+    SC --> CACHE
+
+    %% Database operations
+    MONGO --> USER_DB
+    MONGO --> SCORE_DB
+    MONGO --> LEADER_DB
+
+    %% Monitoring
+    AS1 --> LOGS
+    AS2 --> LOGS
+    AS3 --> LOGS
+    
+    AS1 --> METRICS
+    AS2 --> METRICS
+    AS3 --> METRICS
+    
+    METRICS --> ALERTS
+
+    %% Styling
+    classDef client fill:#e1f5fe
+    classDef server fill:#f3e5f5
+    classDef database fill:#e8f5e8
+    classDef cache fill:#fff3e0
+    classDef security fill:#ffebee
+    classDef realtime fill:#f1f8e9
+    classDef monitoring fill:#fafafa
+
+    class WC1,WC2,WC3 client
+    class AS1,AS2,AS3,SC,AC,LBC server
+    class MONGO,USER_DB,SCORE_DB,LEADER_DB database
+    class REDIS,PUBSUB,CACHE cache
+    class AUTH,RATE,VALID security
+    class WS1,WS2,WS3 realtime
+    class LOGS,METRICS,ALERTS monitoring
